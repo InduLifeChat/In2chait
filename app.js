@@ -39,4 +39,97 @@ $("closeViewer").onclick=()=>$("viewer").classList.add("hide");
 
 window.addEventListener("pagehide",()=>{if(db)db.auth.signOut()});
 init();
-  
+
+  // Bottom navigation tabs
+let currentTab = "chats";
+
+function showTab(tab) {
+  currentTab = tab;
+
+  $("bin").classList.add("hide");
+  $("messages").classList.remove("hide");
+
+  if (tab === "bin") {
+    recycle();
+    return;
+  }
+
+  if (tab === "profile") {
+    $("messages").textContent =
+      "Profile सुविधा अभी इस HTML में सेट नहीं है।";
+    return;
+  }
+
+  render("", tab);
+}
+
+render = function(filter = "", mode = "chats") {
+  $("messages").innerHTML = "";
+
+  let list = rows.filter(m => {
+    let bodyMatch = (m.body || "")
+      .toLowerCase().includes(filter.toLowerCase());
+
+    let type = m.file_type || "";
+
+    if (mode === "media") {
+      return bodyMatch &&
+        (type.startsWith("image/") || type.startsWith("video/"));
+    }
+
+    if (mode === "audio") {
+      return bodyMatch && type.startsWith("audio/");
+    }
+
+    return bodyMatch;
+  });
+
+  if (!list.length) {
+    $("messages").textContent = "अभी कोई मैसेज या मीडिया नहीं है।";
+    return;
+  }
+
+  list.forEach(m => {
+    let d = document.createElement("div");
+    d.className = "msg " + (m.sender === "A" ? "fromA" : "fromI");
+
+    let name = document.createElement("b");
+    name.textContent = m.sender === "A" ? "A" : "Isha";
+    d.append(name, document.createElement("br"));
+
+    if (m.body) d.append(document.createTextNode(m.body));
+
+    if (m.file_url) {
+      let el = m.file_type?.startsWith("video/")
+        ? document.createElement("video")
+        : m.file_type?.startsWith("audio/")
+        ? document.createElement("audio")
+        : document.createElement("img");
+
+      el.src = m.file_url;
+      el.controls = true;
+      d.append(el);
+    }
+
+    let meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = new Date(m.created_at).toLocaleString();
+    d.append(meta);
+
+    let del = document.createElement("button");
+    del.textContent = "Delete";
+    del.onclick = () => softDelete(m.id);
+    d.append(del);
+
+    $("messages").append(d);
+  });
+};
+
+document.querySelectorAll("nav span").forEach((item, index) => {
+  item.style.cursor = "pointer";
+
+  item.onclick = () => {
+    const tabs = ["chats", "media", "audio", "bin", "profile"];
+    showTab(tabs[index]);
+  };
+});
